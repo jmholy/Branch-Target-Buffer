@@ -8,6 +8,8 @@
 FILE *input;
 char curAddr[] = "000000", prevAddr[] = "000000";
 int  cur, prev;
+int hit = 0, miss = 0;
+double hitrate = 0.0;
 //int sizes[3] = {256, 512, 1024};
 char *table = "0123456789abcdef";
 
@@ -17,7 +19,7 @@ typedef struct btb
 	int curPC;
 	int predPC;
 	int prediction;
-	int bool;
+	int busy;
 } BTB;
 
 int sm(int n, int taken)
@@ -123,45 +125,113 @@ int readNew()
 	}
 }
 
+//need an add to BTB in available spot function
+void addToBTB(BTB b[], int size, int curPC, int predPC, int pred)
+{
+	int i = 0;
+
+	for (i = 0; i < size; i++)
+	{
+		if (b[i].busy == 0)
+		{
+			b[i].curPC = curPC;
+			b[i].predPC = predPC;
+			b[i].prediction = pred;
+			b[i].busy = 1;
+			return;
+		}
+	}
+}
+
+
+//need to search BTB for integer address prediction
+// return the predicted PC if branch is found in BTB
+int searchBTB(BTB b[], int size, int curPC)
+{
+	int i;
+
+	for (i = 0; i < size; i++)
+	{
+		if (b[i].busy == 1)
+		{
+			if (curPC == b[i].curPC)
+			{
+				return i;
+			}
+		}
+	}
+	return -1;
+}
 
 int main(int argc, char *argv[])
 {
 	int i = 0, taken = 0;
 	int branchCount = 0;
 	int sizeBTB = 0;
-	char *filename;
-	printf("Please enter the source file: ");
-	scanf("%s", filename);
-	printf("Please enter the size of BTB wanted: ");
-	scanf("%d", &sizeBTB);
-	input = fopen(filename, "r");
-
+	int k = 0;
+	int position = 0;
+	char *filename = "\0";
+	BTB btbreal[1024];
+	//printf("Please enter the source file: ");
+	//scanf("%s", filename);
+	//filename = "testRun.txt";
+	while (sizeBTB != 256 && sizeBTB != 512 && sizeBTB != 1024)
+	{
+		printf("Please enter the size of BTB wanted (256, 512, 1024): ");
+		scanf("%d", &sizeBTB);
+	}
+	input = fopen("test.txt", "r");
 	//while(readNew())
-	while (!feof)
+	while (!feof(input))
 	{
 		readNew();
 		convert(); // ASCII to integer
 		//printf("curAddr  = %s    prevAddr = %s\n", curAddr, prevAddr);
 		//printf("cur      = %d   prev     = %d\n", cur, prev);
-
-		if (cur != prev + 4 && prev) {
-			//printf(" branch: %s  =>  %d\n", prevAddr, prev);
-			taken = 1;
-			branchCount++;
-		}
-		/*else
+		position = searchBTB(btbreal, sizeBTB, cur);
+		if (position >= 0)
 		{
-		taken = 0;
-		}*/
-
-
-
-		//btb stuff
+			if (cur != prev + 4 && prev) {
+				//printf(" branch: %s  =>  %d\n", prevAddr, prev);
+				taken = 1;
+				if (btbreal[position].prediction == 2 || btbreal[position].prediction == 3)
+				{
+					miss++;
+					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+				}
+				else
+				{
+					hit++;
+					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+				}
+			}
+			else
+			{
+				taken = 0;
+				if (btbreal[position].prediction == 0 || btbreal[position].prediction == 1)
+				{
+					miss++;
+					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+				}
+				else
+				{
+					hit++;
+					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+				}
+			}
+		}
+		else
+		{
+			if (cur != prev + 4 && prev)
+			{
+				miss++;
+				branchCount++;
+				addToBTB(btbreal, sizeBTB, prev, cur, 0);
+			}
+		}
 	}
-
-
-
-
+	hitrate = (double)(hit / miss);
+	printf("Hits: %d  Misses: %d  Hit Rate: %lf\n", hit, miss, hitrate);
 	fclose(input);
 
 	return 0;
