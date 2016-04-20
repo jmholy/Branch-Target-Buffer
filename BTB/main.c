@@ -22,17 +22,29 @@ typedef struct btb
 	int busy;
 } BTB;
 
+void init(BTB btbname[], int size)
+{
+	int k = 0;
+	for (k = 0; k < size; k++)
+	{
+		btbname[k].curPC = 0;
+		btbname[k].predPC = 0;
+		btbname[k].prediction = 0;
+		btbname[k].busy = 0;
+	}
+}
+
 int sm(int n, int taken)
 {
 	switch (n)
 	{
 	case 0: if (taken)
 	{
-		return 1;
+		return 0;
 	}
 			else
 			{
-				return 0;
+				return 1;
 			}
 	case 1: if (taken)
 	{
@@ -164,75 +176,77 @@ int searchBTB(BTB b[], int size, int curPC)
 }
 
 int main(int argc, char *argv[])
-{
-	int i = 0, taken = 0;
-	int branchCount = 0;
-	int sizeBTB = 0;
-	int k = 0;
-	int position = 0;
-	char *filename = "\0";
-	BTB btbreal[1024];
-	//printf("Please enter the source file: ");
-	//scanf("%s", filename);
-	//filename = "testRun.txt";
-	while (sizeBTB != 256 && sizeBTB != 512 && sizeBTB != 1024)
-	{
-		printf("Please enter the size of BTB wanted (256, 512, 1024): ");
-		scanf("%d", &sizeBTB);
-	}
-	input = fopen("test.txt", "r");
-	//while(readNew())
-	while (!feof(input))
-	{
-		readNew();
-		convert(); // ASCII to integer
-		//printf("curAddr  = %s    prevAddr = %s\n", curAddr, prevAddr);
-		//printf("cur      = %d   prev     = %d\n", cur, prev);
-		position = searchBTB(btbreal, sizeBTB, cur);
-		if (position >= 0)
+{ 
+		int i = 0, taken = 0;
+		int branchCount = 0;
+		int sizeBTB = 0;
+		int k = 0;
+		int position = 0;
+		char *filename = "\0";
+		BTB btbreal[1024];
+		//printf("Please enter the source file: ");
+		//scanf("%s", filename);
+		while (sizeBTB != 256 && sizeBTB != 512 && sizeBTB != 1024)
 		{
-			if (cur != prev + 4 && prev) {
-				//printf(" branch: %s  =>  %d\n", prevAddr, prev);
-				taken = 1;
-				if (btbreal[position].prediction == 2 || btbreal[position].prediction == 3)
-				{
-					miss++;
-					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+			printf("Please enter the size of BTB wanted (256, 512, 1024): ");
+			scanf("%d", &sizeBTB);
+		}
+		input = fopen("trace.txt", "r");
+		init(btbreal, sizeBTB);
+		//while(readNew())
+		while (!feof(input))
+		{
+			readNew();
+			convert(); // ASCII to integer
+			//printf("curAddr  = %s    prevAddr = %s\n", curAddr, prevAddr);
+			//printf("cur      = %d   prev     = %d\n", cur, prev);
+			position = searchBTB(btbreal, sizeBTB, prev);
+			if (position >= 0)
+			{
+				if (cur != prev + 4 && prev) {
+					//printf(" branch: %s  =>  %d\n", prevAddr, prev);
+					taken = 1;
+					if (btbreal[position].prediction == 2 || btbreal[position].prediction == 3)
+					{
+						miss++;
+						btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					}
+					else
+					{
+						hit++;
+						btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					}
 				}
 				else
 				{
-					hit++;
-					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					taken = 0;
+					if (btbreal[position].prediction == 0 || btbreal[position].prediction == 1)
+					{
+						miss++;
+						btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					}
+					else
+					{
+						hit++;
+						btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					}
 				}
 			}
 			else
 			{
-				taken = 0;
-				if (btbreal[position].prediction == 0 || btbreal[position].prediction == 1)
+				if (cur != prev + 4 && prev)
 				{
 					miss++;
-					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
-				}
-				else
-				{
-					hit++;
-					btbreal[position].prediction = sm(btbreal[position].prediction, taken);
+					branchCount++;
+					if (btbreal[sizeBTB-1].busy == 0)
+					{
+						addToBTB(btbreal, sizeBTB, prev, cur, 0);
+					}
 				}
 			}
 		}
-		else
-		{
-			if (cur != prev + 4 && prev)
-			{
-				miss++;
-				branchCount++;
-				addToBTB(btbreal, sizeBTB, prev, cur, 0);
-			}
-		}
-	}
-	hitrate = (double)(hit / miss);
-	printf("Hits: %d  Misses: %d  Hit Rate: %lf\n", hit, miss, hitrate);
-	fclose(input);
-
+		hitrate = (double)(hit / (double)(miss + hit));
+		printf("Hits: %d  Misses: %d  Hit Rate: %lf\n", hit, miss, hitrate);
+		fclose(input);
 	return 0;
 }
