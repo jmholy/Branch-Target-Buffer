@@ -26,5 +26,14 @@
     <Text Include="trace.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="Li.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Eqntott.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Wave5.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>
