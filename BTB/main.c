@@ -1,4 +1,6 @@
 // Brian Pecha - April 9, 2016
+// Mark Holy
+// Jordan Little
 
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +12,6 @@ char curAddr[] = "000000", prevAddr[] = "000000";
 int  cur, prev;
 int hit = 0, miss = 0;
 double hitrate = 0.0;
-//int sizes[3] = {256, 512, 1024};
 char *table = "0123456789abcdef";
 
 
@@ -91,10 +92,9 @@ void base16to10(char *s, int *n)
 	int i, j;
 
 	for (j = 0; j < 6; j++)
-	{//printf("j=%d ",j);
+	{
 		for (i = 0; i < 16; i++)
 		{
-			//printf("%d ", i);
 			if (s[j] == table[i])
 			{
 				*n = *n + i * myexp(5 - j);
@@ -181,30 +181,25 @@ int main(int argc, char *argv[])
 		int branchCount = 0;
 		int sizeBTB = 0;
 		int k = 0;
+		int j = 0;
 		int position = 0;
 		char *filename = "\0";
 		BTB btbreal[1024];
-		//printf("Please enter the source file: ");
-		//scanf("%s", filename);
 		while (sizeBTB != 256 && sizeBTB != 512 && sizeBTB != 1024)
 		{
 			printf("Please enter the size of BTB wanted (256, 512, 1024): ");
 			scanf("%d", &sizeBTB);
 		}
-		input = fopen("trace.txt", "r");
+		input = fopen("Wave5.txt", "r");
 		init(btbreal, sizeBTB);
-		//while(readNew())
 		while (!feof(input))
 		{
 			readNew();
 			convert(); // ASCII to integer
-			//printf("curAddr  = %s    prevAddr = %s\n", curAddr, prevAddr);
-			//printf("cur      = %d   prev     = %d\n", cur, prev);
 			position = searchBTB(btbreal, sizeBTB, prev);
 			if (position >= 0)
 			{
 				if (cur != prev + 4 && prev) {
-					//printf(" branch: %s  =>  %d\n", prevAddr, prev);
 					taken = 1;
 					if (btbreal[position].prediction == 2 || btbreal[position].prediction == 3)
 					{
@@ -237,7 +232,6 @@ int main(int argc, char *argv[])
 				if (cur != prev + 4 && prev)
 				{
 					miss++;
-					branchCount++;
 					if (btbreal[sizeBTB-1].busy == 0)
 					{
 						addToBTB(btbreal, sizeBTB, prev, cur, 0);
@@ -246,7 +240,14 @@ int main(int argc, char *argv[])
 			}
 		}
 		hitrate = (double)(hit / (double)(miss + hit));
-		printf("Hits: %d  Misses: %d  Hit Rate: %lf\n", hit, miss, hitrate);
+		for (j = 0; j < sizeBTB; j++)
+		{
+			if (btbreal[j].busy == 1)
+			{
+				branchCount++;
+			}
+		}
+		printf("Hits: %d  Misses: %d  Hit Rate: %lf%%   Branches in BTB: %d\n", hit, miss, hitrate * 100, branchCount);
 		fclose(input);
 	return 0;
 }
